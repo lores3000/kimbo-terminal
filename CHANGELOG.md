@@ -7,9 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 1.1.1 - 2026-08-10
+
+### Security
+
+- **Updated shipped dependencies carrying published advisories.** `tauri` 2.10.3 → 2.11.1, `tar` → 0.4.46, `serde_with` → 3.22.0, and the `rand` 0.8 line → 0.8.7. These crates are part of the application binary, so 1.1.0 and earlier contain the affected versions; three moderate-severity advisories are closed by this release.
+- Development-only dependencies were updated in the same pass (`@vitest/browser` → 4.1.10, `undici` → 7.29.0, `postcss` → 8.5.26). These are build and test tooling and were never part of a shipped build, so no released version of Kimbo was affected by them.
+
 ### Fixes
 
 - **The tab bar no longer flickers or swallows clicks while a TUI animates the terminal title.** Programs like codex update the title with a spinner ~10 times per second; each update used to rebuild the whole tab bar, destroying the tab under the cursor mid-hover and mid-click. Title changes now patch the existing tab label in place.
+
+## 1.1.0 - 2026-07-17
+
+### Features
+
+- **Update channels.** Kimbo can now follow either the stable or the unstable channel, set via the new `updates.channel` config field or the channel switcher in About. The unstable channel receives preview builds ahead of tagged releases.
+- **In-app updates with live progress.** Updates download and install from within the app, streaming progress as they go, instead of sending you to the browser. About also gained a "reinstall stable" action, so leaving the unstable channel puts you back on the current stable build in one step.
+- **Branded DMG installer window.** The installer now opens with a designed background instead of the stock Finder window.
+
+## 1.0.3 - 2026-07-13
+
+### Fixes
+
+- **The far-right tab no longer oscillates or flashes.** The tab bar could enter a feedback loop between its scroll position and its layout measurement, leaving the last tab visibly jittering.
+
+## 1.0.2 - 2026-07-13
+
+Packaging-only re-release. No application changes.
+
+## 1.0.1 - 2026-07-09
+
+Packaging-only re-release. No application changes.
 
 ## 1.0.0 - 2026-06-29
 
