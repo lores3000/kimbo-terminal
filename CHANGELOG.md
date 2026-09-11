@@ -5,6 +5,12 @@ All notable changes to Kimbo are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0/).
 
+## Unreleased
+
+### Fixes
+
+- **Text no longer vanishes from the terminal for the rest of the session.** After the Mac ran short of memory, most of the alphabet could disappear from a pane: the words were still there — still selectable, still scrolling, still copyable — but the letters drew as blank space, and nothing short of quitting Kimbo brought them back. macOS had reclaimed the GPU process out from under the window, and Kimbo rebuilt the renderer without rebuilding the glyph images that belong to it, so every character the session had already drawn once was read from a texture that no longer held anything. Newly seen characters still drew, which is why the gaps looked so arbitrary. The glyph atlas is now discarded whenever the renderer is replaced, and the text is back on the next frame.
+
 ## 1.2.5 - 2026-10-20
 
 ### Fixes
