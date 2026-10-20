@@ -67,27 +67,33 @@ fn main() {
     let telemetry_on = kimbo_config::AppConfig::load()
         .map(|c| c.telemetry.enabled)
         .unwrap_or(false);
-    let sentry_client = sentry::init((
-        if telemetry_on { Some(SENTRY_DSN) } else { None },
-        sentry::ClientOptions {
-            release: sentry::release_name!(),
-            // Never attach IP/username/etc. And scrub the machine hostname,
-            // which the Rust SDK would otherwise auto-fill into server_name.
-            send_default_pii: false,
-            before_send: Some(std::sync::Arc::new(|mut event| {
-                event.server_name = None;
-                event.user = None;
-                Some(event)
-            })),
-            ..Default::default()
-        },
-    ));
-    // Native crash (minidump) capture; no-ops when the client has no DSN.
+    let sentry_plugin = tauri_plugin_sentry::Sentry::new();
+    let sentry_options = sentry::ClientOptions::new()
+        .maybe_release(sentry::release_name!())
+        // Never attach IP/username/etc. And scrub the machine hostname,
+        // which the Rust SDK would otherwise auto-fill into server_name.
+        .send_default_pii(false)
+        .before_send(|mut event| {
+            event.server_name = None;
+            event.user = None;
+            Some(event)
+        })
+        .add_integration(sentry_plugin.clone());
+    let sentry_options = if telemetry_on {
+        sentry_options.dsn(SENTRY_DSN)
+    } else {
+        sentry_options
+    };
+    // Native crash (minidump) capture. The integration only starts its crash
+    // reporter process when the client has a DSN, so it is inert when
+    // telemetry is off. Code above this line runs in both processes.
     #[cfg(not(target_os = "ios"))]
-    let _sentry_minidump = tauri_plugin_sentry::minidump::init(&sentry_client);
+    let sentry_options =
+        sentry_options.add_integration(sentry::integrations::minidump::MinidumpIntegration::new());
+    let _sentry_client = sentry::init(sentry_options);
 
     tauri::Builder::default()
-        .plugin(tauri_plugin_sentry::init(&sentry_client))
+        .plugin(sentry_plugin)
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
