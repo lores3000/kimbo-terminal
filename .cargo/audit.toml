@@ -1,7 +1,7 @@
 [advisories]
-# quick-xml <0.41 pulled transitively via plist (tauri) and
-# tauri-winrt-notification (tauri-plugin-notification, Windows-only).
-# No upstream fix available as of 2026-07-09: latest plist (1.9.0) requires
-# quick-xml ^0.39, latest tauri-winrt-notification (0.7.2) requires ^0.37.
-# Remove these once upstream bumps to quick-xml >=0.41.
-ignore = ["RUSTSEC-2026-0194", "RUSTSEC-2026-0195"]
+# zip 4.x is pulled by tauri-plugin-updater for its Windows-only install
+# path (`cfg(target_os = "windows")`), where it extracts the downloaded
+# update archive. Kimbo ships macOS only, so none of that code is compiled
+# into the app. Latest updater (2.14.0) still requires zip ^4, so there is
+# nothing to upgrade to yet. Remove these once the updater moves to zip 9.
+ignore = ["RUSTSEC-2026-0367", "RUSTSEC-2026-0368", "RUSTSEC-2026-0369"]

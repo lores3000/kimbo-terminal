@@ -10,14 +10,15 @@ members = [
 ]
 exclude = ["vendor/tao"]
 
-# tao 0.35.3 with one change: the NSApplication `sendEvent:` override is
+# tao 0.37.1 plus upstream PR tauri-apps/tao#1354 (merged 2026-10-12, not yet
+# released): the Objective-C method implementations and CFRunLoop callbacks are
 # `extern "C-unwind"` instead of `extern "C"`. AppKit raises Objective-C
 # exceptions from inside event dispatch (macOS 27's
 # NSCampoLightweightUIController asserts on a mouse-entered after its
 # text-input affordance is torn down), and -[NSApplication run] catches and
 # logs them. Through an `extern "C"` frame the unwind aborts the app instead
 # ("panic in a function that cannot unwind", Sentry KIMBO-3). Drop this once
-# upstream tao ships the same fix; it is still `extern "C"` in 0.37.1.
+# a tao release includes #1354 (it is still `extern "C"` in 0.37.1).
 [patch.crates-io]
 tao = { path = "vendor/tao" }
 
@@ -29,12 +30,12 @@ repository = "https://github.com/lucatescari/kimbo-terminal"
 authors = ["Luca Tescari"]
 
 [workspace.dependencies]
-toml = "0.8"
+toml = "1.1"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 anyhow = "1"
-dirs = "5"
-notify = "7"
+dirs = "7"
+notify = "8"
 fuzzy-matcher = "0.3"
 log = "0.4"
 env_logger = "0.11"
