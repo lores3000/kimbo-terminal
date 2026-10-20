@@ -7,21 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-### Changed
+### Fixes
 
-- **The accent colour now comes from the theme, and the Accent setting is gone.** The setting wrote the accent inline onto the window, where it outranked the theme permanently: you could switch themes all day and the selection, active tab and highlights stayed the colour you picked months ago, with nothing on screen explaining why. The accent now follows the theme's own `panel.activeBorder` — the key theme authors already use to say "this is my colour" — so Claude Red accents in its orange `#d97757`, Matrix in `#00ff41` and Gruvbox in `#fabd2f`, where all three previously borrowed whatever blue their palette happened to carry. Twelve of the twenty-one published themes look different, and more like themselves, as a result. Density and Tab style keep their place in Settings, now under Appearance. If you had a custom accent set, it is retired on next launch; pick a theme whose accent you like, or edit one at [themes.kimbo.tescari.dev](https://themes.kimbo.tescari.dev).
+- **The macOS 27 crash fix now comes from upstream tao.** The `sendEvent:` change Kimbo vendored in 1.2.4 was merged into tao as [tauri-apps/tao#1354](https://github.com/tauri-apps/tao/pull/1354) on 2026-10-12, extended to the application and window delegates, the view and the run loop callbacks, so any AppKit exception raised beneath one of them reaches the system handler instead of aborting. No tao release includes it yet, so Kimbo now vendors tao 0.37.1 with that exact upstream patch applied. The vendored copy goes away with the first tao release that ships it.
 
-### Features
+### Security
 
-- **The tab dot now lights up for codex, not just Claude Code.** A tab whose pane is working has shown a breathing dot for a while, but only ever for Claude Code, because that dot reads Claude's own session state. codex kept animating its spinner inside the tab label instead, so the same idea looked different depending on which tool you ran. codex now gets the same dot, read from the spinner it puts in the terminal title, and the spinner comes out of the label. A tab running both shows whichever state matters more: Claude waiting on you outranks codex merely working. As a side effect the codex tab label stops changing width ten times a second while it thinks.
+- **The TLS library used to download updates is patched again.** rustls 0.23.45 carried four advisories published on 2026-10-14, RUSTSEC-2026-0346 to 0349: `Debug` output exposing session secrets, buffered data sent to the outer server after an ECH rejection, a 1 GiB allocation during certificate decompression before authentication, and a downgrade to classical key exchange after an unauthenticated ServerHello. All low to medium, and none known to be reachable through the updater, but it remains the one network path that runs what it fetches. Now on 0.23.46.
 
-- **Hovering an image path shows the picture.** Point at a `.png`, `.jpg`, `.gif` or `.webp` path anywhere in the terminal and a thumbnail appears centred just above the link, captioned with the file name. It holds still while you move along the link. Cmd+click still opens it in Preview, Cmd+Shift+click still reveals it in Finder, and any keystroke dismisses it. Nothing about it is anchored to the character grid, so it also works inside full-screen programs like Claude Code, which own every cell and leave no room for a real inline image.
+- **Three `zip` advisories are recorded as not applicable rather than left red.** cargo audit flags zip 4.6.1 (RUSTSEC-2026-0367 to 0369, SUID bits, symlink targets and permissions during extraction, one of them rated critical). It reaches the tree only through the updater plugin's Windows-only install path, which is never compiled into the macOS app, and the latest updater still requires zip 4, so there is nothing to upgrade to. The three ids are ignored in `.cargo/audit.toml` with that reasoning, so the audit job fails for things that can reach a build and not for this. The older quick-xml ignores are gone, since every dependency has moved past the affected versions.
 
-- **Branching or forking a Claude conversation opens the other side in its own pane.** Run `/branch` and Kimbo splits the pane, resuming the original conversation beside the branch. Run `/fork` and it opens the background session that was created. Settings → Claude Code chooses where it opens: a split beside the pane, a split above and below, or a new tab, and the whole thing can be switched off.
+### Notes
 
-- **Releases are now identified by their source, not just their version.** Every build carries the git commit it was compiled from, shown in Settings → About as `1.2.1 (a2fnd4f)`. A stable release cut from the same commit as the current unstable preview is now automatically released under the version that preview declared, so testing `1.2.1-unstable.3` genuinely means testing `1.2.1`. See [docs/release-identity.md](docs/release-identity.md).
+- Tauri 2.11.6 to 2.12.4, with the npm packages and every plugin moved in lockstep (dialog 2.8, notification 2.7, opener 2.7, process 2.4, updater 2.14). Tauri 2.12 stops a capability that denies a command for remote origins from also denying it for the app itself, loads `asset://` files off the event loop thread, and stops queuing large channel payloads for webviews that have closed. The September advisory about the channel fetch command (GHSA-w28w-mhc8-qvjv) was already fixed in 2.11.6, which 1.2.3 shipped.
+- Sentry Rust SDK 0.42 to 0.49 and tauri-plugin-sentry 0.5 to 0.8. Client options are now built with setters, and native crash capture uses the SDK's own minidump integration instead of the plugin's. As before, the crash reporter process only starts when telemetry is on.
+- The rest of the Rust tree refreshed: `dirs` 7, `notify` 8, `toml` 1.1, `window-vibrancy` 0.8, and the unused `nix` dependency removed from both crates that declared it. On the npm side everything within range, which includes the `source-map-js` fix Dependabot had queued in #35 (development-only, GHSA-68fv-2mgg-jv7q).
+- CI actions moved to their Node 24 releases (checkout v7, setup-node v7, install-action 2.87.29, current rust-toolchain stable), still pinned by commit SHA. GitHub's runners had started forcing the Node 20 versions onto Node 24 with a deprecation warning on every run.
 
-- **Theme previews now show a mock Kimbo window instead of coloured bars.** Each card renders a title bar, a prompt line, output and a block cursor in the theme's own colours, so you can see how text actually reads against the background before switching. Themes you have installed show a genuinely multi-coloured prompt; ones you have not installed yet fall back to fewer colours in the same layout, because the community index only carries four.
+## 1.2.4 - 2026-10-03
 
 ### Fixes
 
@@ -29,17 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **A tab can no longer become unclickable.** Right-clicking a tab, or pressing one and letting go over the terminal, left a half-started drag behind. Moving the mouse across that tab later, with no button held, finished starting it: the tab took on its dragging style, which ignores the mouse entirely, so it lost its hand cursor and stopped responding to clicks while the keyboard still reached it. Clicking any other tab then made it permanent for the rest of the session. Only a left-button press held down now starts a drag, the release is noticed wherever it lands, and a new press always tidies up after the last one.
 
-- **Opening a pane and moving the mouse straight over it no longer throws.** For the few milliseconds between the terminal appearing on screen and its shell process being ready, the pane was hoverable but did not yet know its working directory. A hover in that window failed silently in the background instead of underlining anything, and was reported as a crash. It now reads the directory from somewhere that exists for the pane's whole life.
-
-- **The file paths Claude Code prints are clickable again.** Claude Code shows an attachment as `[image]` followed by an absolute path, and lays its transcript out itself: a long path is broken at the pane width with each remainder indented underneath. No part of it could be clicked. The tag was glued to the front of the path, so the first row resolved to nothing, and the indented remainder had no slash in it, so it did not look like a path at all. Kimbo now joins the pieces back up, across as many as three continuation rows, and underlines a join only when the whole path exists on disk. Paths broken by the terminal's own wrapping are joined too.
-
-- **Updating no longer leaves your shells running in the background.** The sweep that hangs up every shell on quit had exactly one caller, the Cmd-Q path, so the updater's restart went around it. Tauri does not run `Drop` on managed state, which meant an in-app update reparented every shell in the window to launchd, along with whatever was running in it. They stayed there: one machine had seven orphaned shells up to 18 hours old, holding 2.2 GB of compressed memory between them, from two earlier updates. Both relaunch paths now sweep first.
-
-- **A blank, unresponsive window after the machine runs low on memory.** WKWebView reports WebGL context loss whenever its GPU process goes away, and Kimbo answered every loss by building a new context on the next window focus. That call is a synchronous IPC to the GPU process, so when the process is up but unable to answer, which is what memory pressure produces since macOS kills it and the replacement cannot get the resources to start, the renderer's main thread parks in the kernel and the window paints nothing and takes no input, at 0% CPU, until the GPU process is killed by hand. The platform offers no way to time-box that call, so the first stall cannot be prevented; what is fixed is the repeat. A context creation that blocks the main thread, or fails outright, now retires the GPU renderer for the session instead of re-entering the same wait on every Cmd-Tab.
-
-- **A hung `claude agents` probe no longer runs forever.** Branch and fork detection asks the CLI what sessions exist by running `claude agents --json` through a login shell, and it waited for the answer with no deadline. A probe that never returned held its thread, a login shell and a ~150 MB Node process for the rest of the session; one was found still resident 47 seconds in, on a machine that was already out of memory. The probe now gives up after five seconds and kills the whole process group, not just the shell: killing only the shell would have left the Node process running and reparented to launchd.
-
-- **The terminal scrollbar auto-hides again, and is back to 6px.** xterm 6 replaced the native scrollbar with its own, which silently disabled every scrollbar style and the auto-hide logic at once, leaving a permanently visible 14px bar. It also fixes a longer-standing bug the rewrite exposed: the old thumb was hardcoded white, so on light themes it had been invisible.
+## 1.2.3 - 2026-09-26
 
 ### Security
 
@@ -55,11 +48,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Notes
 
-- Dependencies updated across both ecosystems. `cargo update` clears six RustSec advisories (unsound `anyhow`, `event-listener` and `memmap2`; `rand` 0.7, `scc` and `fxhash` dropped from the tree entirely), taking cargo audit from 24 informational warnings to 18. The rest are the Linux-only GTK3 stack this macOS app never ships. Neither ecosystem reports any vulnerability.
-- Major upgrades to xterm 6, Vite 8 (now bundling with Rolldown), TypeScript 7 and `@types/node` 26. CI moves to Node 22 for Vite 8's engine floor.
-- A release now refuses to run from a dirty working tree, since the stamped commit would not describe what was built. `KIMBO_ALLOW_DIRTY=1` overrides it.
 - Dependencies refreshed across both ecosystems: 77 crates and 62 npm packages to their latest semver-compatible versions, plus vitest 5 and jsdom 30. Both test suites pass unchanged on the new majors. `cargo audit` reports no vulnerabilities and `npm audit` none at any severity. Six Rust crates (`sentry`, `tauri-plugin-sentry`, `notify`, `window-vibrancy`, `dirs`, `serial_test`) are a major version behind and still need manifest changes; they are untouched here.
+
 - Every GitHub Actions step in CI is pinned to a full commit SHA rather than a tag or branch, so an upgrade shows up as a diff instead of happening silently between two runs of the same workflow.
+
+## 1.2.2 - 2026-09-21
+
+### Features
+
+- **The tab dot now lights up for codex, not just Claude Code.** A tab whose pane is working has shown a breathing dot for a while, but only ever for Claude Code, because that dot reads Claude's own session state. codex kept animating its spinner inside the tab label instead, so the same idea looked different depending on which tool you ran. codex now gets the same dot, read from the spinner it puts in the terminal title, and the spinner comes out of the label. A tab running both shows whichever state matters more: Claude waiting on you outranks codex merely working. As a side effect the codex tab label stops changing width ten times a second while it thinks.
+
+- **Hovering an image path shows the picture.** Point at a `.png`, `.jpg`, `.gif` or `.webp` path anywhere in the terminal and a thumbnail appears centred just above the link, captioned with the file name. It holds still while you move along the link. Cmd+click still opens it in Preview, Cmd+Shift+click still reveals it in Finder, and any keystroke dismisses it. Nothing about it is anchored to the character grid, so it also works inside full-screen programs like Claude Code, which own every cell and leave no room for a real inline image.
+
+### Fixes
+
+- **Opening a pane and moving the mouse straight over it no longer throws.** For the few milliseconds between the terminal appearing on screen and its shell process being ready, the pane was hoverable but did not yet know its working directory. A hover in that window failed silently in the background instead of underlining anything, and was reported as a crash. It now reads the directory from somewhere that exists for the pane's whole life.
+
+- **The file paths Claude Code prints are clickable again.** Claude Code shows an attachment as `[image]` followed by an absolute path, and lays its transcript out itself: a long path is broken at the pane width with each remainder indented underneath. No part of it could be clicked. The tag was glued to the front of the path, so the first row resolved to nothing, and the indented remainder had no slash in it, so it did not look like a path at all. Kimbo now joins the pieces back up, across as many as three continuation rows, and underlines a join only when the whole path exists on disk. Paths broken by the terminal's own wrapping are joined too.
+
+- **Updating no longer leaves your shells running in the background.** The sweep that hangs up every shell on quit had exactly one caller, the Cmd-Q path, so the updater's restart went around it. Tauri does not run `Drop` on managed state, which meant an in-app update reparented every shell in the window to launchd, along with whatever was running in it. They stayed there: one machine had seven orphaned shells up to 18 hours old, holding 2.2 GB of compressed memory between them, from two earlier updates. Both relaunch paths now sweep first.
+
+- **A blank, unresponsive window after the machine runs low on memory.** WKWebView reports WebGL context loss whenever its GPU process goes away, and Kimbo answered every loss by building a new context on the next window focus. That call is a synchronous IPC to the GPU process, so when the process is up but unable to answer, which is what memory pressure produces since macOS kills it and the replacement cannot get the resources to start, the renderer's main thread parks in the kernel and the window paints nothing and takes no input, at 0% CPU, until the GPU process is killed by hand. The platform offers no way to time-box that call, so the first stall cannot be prevented; what is fixed is the repeat. A context creation that blocks the main thread, or fails outright, now retires the GPU renderer for the session instead of re-entering the same wait on every Cmd-Tab.
+
+- **A hung `claude agents` probe no longer runs forever.** Branch and fork detection asks the CLI what sessions exist by running `claude agents --json` through a login shell, and it waited for the answer with no deadline. A probe that never returned held its thread, a login shell and a ~150 MB Node process for the rest of the session; one was found still resident 47 seconds in, on a machine that was already out of memory. The probe now gives up after five seconds and kills the whole process group, not just the shell: killing only the shell would have left the Node process running and reparented to launchd.
+
+## 1.2.1 - 2026-08-28
+
+### Changed
+
+- **The accent colour now comes from the theme, and the Accent setting is gone.** The setting wrote the accent inline onto the window, where it outranked the theme permanently: you could switch themes all day and the selection, active tab and highlights stayed the colour you picked months ago, with nothing on screen explaining why. The accent now follows the theme's own `panel.activeBorder` — the key theme authors already use to say "this is my colour" — so Claude Red accents in its orange `#d97757`, Matrix in `#00ff41` and Gruvbox in `#fabd2f`, where all three previously borrowed whatever blue their palette happened to carry. Twelve of the twenty-one published themes look different, and more like themselves, as a result. Density and Tab style keep their place in Settings, now under Appearance. If you had a custom accent set, it is retired on next launch; pick a theme whose accent you like, or edit one at [themes.kimbo.tescari.dev](https://themes.kimbo.tescari.dev).
+
+### Features
+
+- **Branching or forking a Claude conversation opens the other side in its own pane.** Run `/branch` and Kimbo splits the pane, resuming the original conversation beside the branch. Run `/fork` and it opens the background session that was created. Settings → Claude Code chooses where it opens: a split beside the pane, a split above and below, or a new tab, and the whole thing can be switched off.
+
+- **Releases are now identified by their source, not just their version.** Every build carries the git commit it was compiled from, shown in Settings → About as `1.2.1 (a2fnd4f)`. A stable release cut from the same commit as the current unstable preview is now automatically released under the version that preview declared, so testing `1.2.1-unstable.3` genuinely means testing `1.2.1`. See [docs/release-identity.md](docs/release-identity.md).
+
+- **Theme previews now show a mock Kimbo window instead of coloured bars.** Each card renders a title bar, a prompt line, output and a block cursor in the theme's own colours, so you can see how text actually reads against the background before switching. Themes you have installed show a genuinely multi-coloured prompt; ones you have not installed yet fall back to fewer colours in the same layout, because the community index only carries four.
+
+### Fixes
+
+- **The terminal scrollbar auto-hides again, and is back to 6px.** xterm 6 replaced the native scrollbar with its own, which silently disabled every scrollbar style and the auto-hide logic at once, leaving a permanently visible 14px bar. It also fixes a longer-standing bug the rewrite exposed: the old thumb was hardcoded white, so on light themes it had been invisible.
+
+### Notes
+
+- Dependencies updated across both ecosystems. `cargo update` clears six RustSec advisories (unsound `anyhow`, `event-listener` and `memmap2`; `rand` 0.7, `scc` and `fxhash` dropped from the tree entirely), taking cargo audit from 24 informational warnings to 18. The rest are the Linux-only GTK3 stack this macOS app never ships. Neither ecosystem reports any vulnerability.
+
+- Major upgrades to xterm 6, Vite 8 (now bundling with Rolldown), TypeScript 7 and `@types/node` 26. CI moves to Node 22 for Vite 8's engine floor.
+
+- A release now refuses to run from a dirty working tree, since the stamped commit would not describe what was built. `KIMBO_ALLOW_DIRTY=1` overrides it.
 
 ## 1.2.0 - 2026-08-13
 
