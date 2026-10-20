@@ -26,6 +26,31 @@ describe("initTelemetry (opt-in gate)", () => {
     initTelemetry(true);
     initTelemetry(true); // idempotent — must not double-init
     expect(initMock).toHaveBeenCalledTimes(1);
-    expect(initMock.mock.calls[0][0]).toMatchObject({ sendDefaultPii: false, _marker: true });
+    const options = initMock.mock.calls[0][0];
+    expect(options).toMatchObject({
+      _marker: true,
+      dataCollection: {
+        userInfo: false,
+        cookies: false,
+        httpHeaders: false,
+        httpBodies: [],
+        urlQueryParams: false,
+        stackFrameVariables: false,
+      },
+    });
+    expect(options).not.toHaveProperty("sendDefaultPii");
+  });
+
+  it("strips user and host from every event before it leaves the webview", async () => {
+    const initTelemetry = await loadInit();
+    initTelemetry(true);
+    const { beforeSend } = initMock.mock.calls[0][0];
+    const event = beforeSend({
+      message: "boom",
+      user: { ip_address: "{{auto}}", id: "u1" },
+      server_name: "lucas-mac",
+      tags: { kept: "yes" },
+    });
+    expect(event).toEqual({ message: "boom", tags: { kept: "yes" } });
   });
 });
